@@ -28,3 +28,5 @@ with open('OCR test 1.png','rb') as f:
     response = requests.post(request_url, data=params, headers=headers)
     if response:
         print (response.json())
+
+print("萌萌成功啦，耶")
