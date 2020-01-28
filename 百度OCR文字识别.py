@@ -14,7 +14,7 @@ def GetAccessToken(client_id:str,client_secret:str):
 request_url = "https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic"#通用文字识别
 
 client_id='9MnmnErZYlj9jKGetOe6QgxC'
-client_secret='vMzCP0RxfQQFj1SxK5qXpny9W85PxK1E'
+client_secret='vMzCP0RxfQQFj1SxK5qXpny9W8  5PxK1E'
 access_token = GetAccessToken(client_id,client_secret)
 
 # 二进制方式打开图片文件
