@@ -13,7 +13,10 @@ def DownloadOffline(args):
                 'minprice': 4000,
                 'maxprice': 6000, }
     urlFormat = 'https://beijing.baixing.com/zhengzu/?page={page}'
-    dirname = 'Offline'  # 存放的文件夹名字
+    if args.__contains__('dir') and args.dir != None:# 存放的文件夹名字
+        dirname = args.dir
+    else:
+        dirname = 'Offline'
     pageCount = 100  # 爬取的页数
 
     if os.path.exists(dirname) == False:
@@ -34,13 +37,24 @@ def DownloadOffline(args):
         urlelems['page'] += 1
         time.sleep(random.randrange(1000, 2000, 1) / 1000)  # 等待随机时间，减少被阻止概率
 
+#解析页面并生成csv
+def ParsePage(args):
+    if args.__contains__('dir') and args.dir != None and \
+            os.path.exists(args.dir) and os.listdir():# 存放的文件夹名字
+
+
+        BeautifulSoup.encode()
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='租房信息爬虫')
     parser.add_argument('-m', '--mode')  # 运行模式
+    parser.add_argument('-d','--dir')  # 工作目录
     args = parser.parse_args()
     print(args)
 
     if args.mode == 'DownloadOffline':
         DownloadOffline(args)
+    elif args.mode == 'ParsePage':
+        ParsePage(args)
     else:
         print('Not support')
