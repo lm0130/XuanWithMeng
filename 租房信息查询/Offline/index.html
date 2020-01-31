@@ -8,7 +8,7 @@
         <link rel="stylesheet" href="http://cache.amap.com/lbs/static/jquery.range.css" />
         <script src="http://cache.amap.com/lbs/static/jquery-1.9.1.js"></script>
         <script src="http://cache.amap.com/lbs/static/es5.min.js"></script>
-        <script src="http://webapi.amap.com/maps?v=1.3&key=bfe397d75917a769faef4cd6f8f4626e&plugin=AMap.ArrivalRange,AMap.Scale,AMap.Geocoder,AMap.Transfer,AMap.AutoComplete"></script>
+        <script src="http://webapi.amap.com/maps?v=1.3&key=bfe397d75917a769faef4cd6f8f4626e&plugin=AMap.ArrivalRange,AMap.Scale,AMap.Geocoder,AMap.Transfer,AMap.Autocomplete,AMap.PlaceSearch"></script>
         <script src="http://cache.amap.com/lbs/static/jquery.range.js"></script>
         <style>
         .control-panel {
@@ -99,10 +99,21 @@ var infoWindow = new AMap.InfoWindow({
     offset: new AMap.Pixel(0, -30)
 });
 
-var auto = new AMap.Autocomplete({
-    input: "work-location"
-});
-AMap.event.addListener(auto, "select", workLocationSelected);
+        //输入提示
+        var autoOptions = {input: "work-location"};
+        var autoComplete = new AMap.Autocomplete(autoOptions);
+        var placeSearch = new AMap.PlaceSearch(autoOptions);  //构造地点查询类
+        AMap.event.addListener(autoComplete, "select", workLocationSelected);//注册监听，当选中某条记录时会触发
+
+        function workLocationSelected(e)
+        {
+            placeSearch.setCity(e.poi.adcode);
+            placeSearch.search(e.poi.name);  //关键字查询查询
+        }
+// var auto = new AMap.Autocomplete({
+//     input: "work-location"
+// });
+// AMap.event.addListener(auto, "select", workLocationSelected);
 
 
 function takeBus(radio) {

@@ -8,8 +8,9 @@
         <link rel="stylesheet" href="http://cache.amap.com/lbs/static/jquery.range.css" />
         <script src="http://cache.amap.com/lbs/static/jquery-1.9.1.js"></script>
         <script src="http://cache.amap.com/lbs/static/es5.min.js"></script>
-        <script src="http://webapi.amap.com/maps?v=1.3&key=bfe397d75917a769faef4cd6f8f4626e&plugin=AMap.ArrivalRange,AMap.Scale,AMap.Geocoder,AMap.Transfer,AMap.AutoComplete"></script>
+        <script src="http://webapi.amap.com/maps?v=1.3&key=bfe397d75917a769faef4cd6f8f4626e&plugin=AMap.ArrivalRange,AMap.Scale,AMap.Geocoder,AMap.Transfer,AMap.Autocomplete,AMap.PlaceSearch"></script>
         <script src="http://cache.amap.com/lbs/static/jquery.range.js"></script>
+        <script type="text/javascript" src="https://cache.amap.com/lbs/static/addToolbar.js"></script>
         <style>
         .control-panel {
             position: absolute;
@@ -99,45 +100,72 @@
         //         offset: new AMap.Pixel(0,-30)
         //     }
         // );
-        var autoComplete = new AMap.autoComplete(
-            {
-                input:"work-location"
-            }
-        );
-        AMap.event.addListener(autoComplete,"select",workLocationSelected);
+        //输入提示
+        var autoOptions = {input: "work-location"};
+        var autoComplete = new AMap.Autocomplete(autoOptions);
+        var placeSearch = new AMap.PlaceSearch(autoOptions);  //构造地点查询类
+        AMap.event.addListener(autoComplete, "select", workLocationSelected);//注册监听，当选中某条记录时会触发
+
+        var rentMarkerArray;  //租房信息
 
         function workLocationSelected(e)
         {
-            
+            placeSearch.setCity(e.poi.adcode);
+            placeSearch.search(e.poi.name);  //关键字查询查询
         }
 
-        function delRentLocation()
+        function addMarkerByAddress(elem)
         {
+            //呼家楼 东大桥地铁 复星 朝外 央视新址 关东店北街精装独卫,116.45659054299,39.916495006642,6000,https://beijing.baixing.com/zhengzu/a2029381415.html?from=vip
+            console.log(elem);
+            if(elem.length<=1)
+                return;
+            var lng = Number(elem[1]),lat=Number(elem[2]);
+            if(isNaN(lng)==false && lng>0 && isNaN(lat)==false && lat>0) //有坐标可用
+            {
+                var marker = new AMap.Marker(
+                {
+                    map: map,
+                    title: elem[0],
+                    icon: "http://webapi.amap.com/theme/v1.3/markers/n/mark_b.png",
+                    position: [lng,lat],
+                });
+                rentMarkerArray.push(marker);
+            }
+            else
+            {
+                
+            }
+        }
 
+        function delRentInfo()
+        {
+            if(rentMarkerArray) map.remove(rentMarkerArray);
+            rentMarkerArray=[];
         }
 
         function importRentInfo(fileInfo)
         {
+            //先删除现有的房源标记
+            delRentInfo();
             //文件名，只支持在同一个文件夹下
             var fileName = fileInfo.files[0].name;            
             console.log(fileName);
-            //先删除现有的房源标记
-            delRentLocation();
             //所有的地点都记录在集合中
             var rent_locations = new Set();
             var test;
             //jquery操作
-            //似乎是异步操作
+            //get()是异步操作，lambda函数是回调函数
             $.get(fileName, function(data) {
                 console.log(data);
                 data = data.split("\n");
                 data.forEach(function(item, index) {
-                    rent_locations.add(item.split(",")[0]);
+                    rent_locations.add(item.split(","));
                 });
-                // rent_locations.forEach(function(element, index) {
-                //     //加上房源标记
-                //     addMarkerByAddress(element);
-                // });
+                rent_locations.forEach(function(element, index) {
+                    //加上房源标记
+                    addMarkerByAddress(element);
+                });
             });
             console.log("test");
             //console.log(test);
