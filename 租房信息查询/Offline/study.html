@@ -8,7 +8,7 @@
         <link rel="stylesheet" href="http://cache.amap.com/lbs/static/jquery.range.css" />
         <script src="http://cache.amap.com/lbs/static/jquery-1.9.1.js"></script>
         <script src="http://cache.amap.com/lbs/static/es5.min.js"></script>
-        <script src="http://webapi.amap.com/maps?v=1.3&key=bfe397d75917a769faef4cd6f8f4626e&plugin=AMap.ArrivalRange,AMap.Scale,AMap.Geocoder,AMap.Transfer,AMap.Autocomplete,AMap.PlaceSearch"></script>
+        <script src="http://webapi.amap.com/maps?v=1.3&key=bfe397d75917a769faef4cd6f8f4626e&plugin=AMap.ArrivalRange,AMap.Scale,AMap.Geocoder,AMap.Transfer,AMap.Autocomplete,AMap.PlaceSearch,AMap.InfoWindow"></script>
         <script src="http://cache.amap.com/lbs/static/jquery.range.js"></script>
         <script type="text/javascript" src="https://cache.amap.com/lbs/static/addToolbar.js"></script>
         <style>
@@ -58,7 +58,13 @@
         <div id="container"></div>
         <div class="control-panel">
             <div class="control-entry">
-                <label>选择工作地点：</label>
+                <label>选择工作地点1：</label>
+                <div class="control-input">
+                    <input id="work-location" type="text">
+                </div>
+            </div>
+            <div class="control-entry">
+                <label>选择工作地点2：</label>
                 <div class="control-input">
                     <input id="work-location" type="text">
                 </div>
@@ -76,9 +82,15 @@
                     <input type="file" name="file" onChange="importRentInfo(this)" />
                 </div>
             </div>
+            <!-- <div class="control-entry">                
+                <div class="control-input">
+                    <button type="button" onclick="confirmChanged(this)">确认</button> 
+                </div>
+            </div> -->
         </div>
         <div id="transfer-panel"></div>
         <script>
+        //===========地图及地图控件============
         var map = new AMap.Map("container", {
             resizeEnable: true,
             zoomEnable: true,
@@ -89,29 +101,92 @@
         var scaleWidget=new AMap.Scale();//标尺
         map.addControl(scaleWidget);
 
-        // toolBar = new AMap.ToolBar({
-        //     visible: false
-        // });//工具条
-        // map.addControl(toolbar);
-
-        // var arrivalRange = new AMap.ArrivalRange();//到达范围
-        // var infoWindow = new AMap.InfoWindow(
-        //     {
-        //         offset: new AMap.Pixel(0,-30)
-        //     }
-        // );
+        var arrivalRange = new AMap.ArrivalRange();//到达范围
+        var infoWindow = new AMap.InfoWindow(
+            {
+                offset: new AMap.Pixel(0,-30)
+            }
+        );
         //输入提示
         var autoOptions = {input: "work-location"};
         var autoComplete = new AMap.Autocomplete(autoOptions);
-        var placeSearch = new AMap.PlaceSearch(autoOptions);  //构造地点查询类
         AMap.event.addListener(autoComplete, "select", workLocationSelected);//注册监听，当选中某条记录时会触发
 
         var rentMarkerArray;  //租房信息
+        var vehicle="SUBWAY";//交通工具
+        var workAddress,workMarker;//工作地点
+        var arrivalPolygonArray=[];//到达圈轮廓
+        var amapTransfer;//交通路线
+
+        function takeBus(radio) 
+        {
+            vehicle = radio.value;
+            loadWorkLocation()
+        }
+
+        function takeSubway(radio) {
+            vehicle = radio.value;
+            loadWorkLocation()
+        }
 
         function workLocationSelected(e)
         {
-            placeSearch.setCity(e.poi.adcode);
-            placeSearch.search(e.poi.name);  //关键字查询查询
+        //     placeSearch.setCity(e.poi.adcode);
+        //     placeSearch.search(e.poi.name);  //关键字查询查询
+            console.log(e.poi.name);
+            workAddress = e.poi.name;
+            loadWorkLocation();
+        }
+
+        function loadWorkMarker(lng,lat)
+        {
+            workMarker = new AMap.Marker({
+                map: map,
+                title: workAddress,
+                icon: 'http://webapi.amap.com/theme/v1.3/markers/n/mark_r.png',
+                position: [lng, lat]
+            });
+        }
+
+        function loadWorkRange(lng,lat,timeLimit,color,v)
+        {
+            arrivalRange.search([lng, lat], timeLimit, function(status, result) {
+                if (result.bounds) {
+                    for (var i = 0; i < result.bounds.length; i++) {
+                        var polygon = new AMap.Polygon({
+                            map: map,
+                            fillColor: color,
+                            fillOpacity: "0.4",
+                            strokeColor: color,
+                            strokeOpacity: "0.8",
+                            strokeWeight: 1
+                        });
+                        polygon.setPath(result.bounds[i]);
+                        arrivalPolygonArray.push(polygon);
+                    }
+                }
+            }, {
+                policy: v
+            });
+        }
+
+        function loadWorkLocation()
+        {
+            var geocoder = new AMap.Geocoder({
+                city: "北京",
+                radius: 1000
+            });
+
+            geocoder.getLocation(workAddress, function(status, result) {
+                if (status === "complete" && result.info === 'OK') {
+                    var geocode = result.geocodes[0];
+                    x = geocode.location.getLng();
+                    y = geocode.location.getLat();
+                    loadWorkMarker(x, y);
+                    loadWorkRange(x, y, 60, "#3f67a5", vehicle);
+                    map.setZoomAndCenter(12, [x, y]);
+                }
+            })
         }
 
         function addMarkerByAddress(elem)
@@ -130,11 +205,31 @@
                     icon: "http://webapi.amap.com/theme/v1.3/markers/n/mark_b.png",
                     position: [lng,lat],
                 });
+                marker.content="<div>房源：<a target = '_blank' href='" + elem[4] + "'>" + elem[0]+ "</a><div>"+
+                    "<div>价格：<a>" + elem[3]+ "</a><div>"+
+                    "<iframe   src='"+elem[4]+"'width=640 height=480 ></iframe>";
+                marker.on('click',function(e)
+                {
+                    //设置信息
+                    infoWindow.setContent(e.target.content);
+                    //在标记的位置打开窗体
+                    infoWindow.open(map, e.target.getPosition());
+                    if (amapTransfer) amapTransfer.clear();
+                    amapTransfer = new AMap.Transfer({
+                        map: map,
+                        policy: AMap.TransferPolicy.LEAST_TIME,
+                        city: "北京市",
+                        panel: 'transfer-panel'
+                    });
+                    console.log(workMarker);
+                    amapTransfer.search([workMarker.position,
+                     new AMap.LngLat(lng,lat)], function(status, result) {})
+                });
                 rentMarkerArray.push(marker);
             }
             else
             {
-                
+
             }
         }
 
@@ -157,7 +252,7 @@
             //jquery操作
             //get()是异步操作，lambda函数是回调函数
             $.get(fileName, function(data) {
-                console.log(data);
+                //console.log(data);
                 data = data.split("\n");
                 data.forEach(function(item, index) {
                     rent_locations.add(item.split(","));
@@ -167,9 +262,9 @@
                     addMarkerByAddress(element);
                 });
             });
-            console.log("test");
+            //console.log("test");
             //console.log(test);
-            console.log(rent_locations);
+            //console.log(rent_locations);
         }
         </script>
     </body>
